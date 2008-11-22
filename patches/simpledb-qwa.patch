@@ -1,0 +1,86 @@
+--- simpledb.pl.bak	2008-11-22 01:40:36.000000000 -0500
++++ simpledb.pl	2008-11-22 10:55:46.000000000 -0500
+@@ -17,6 +17,7 @@
+  simpledb [opts] delete      DOMAIN ITEM [NAME[=VALUE]]...
+ 
+  simpledb [opts] query DOMAIN EXPRESSION
++ simpledb [opts] query-with-attributes DOMAIN ATTRIBUTES EXPRESSION
+ 
+ =head1 OPTIONS
+ 
+@@ -45,6 +46,7 @@
+  NAME           Attribute name
+  VALUE          Attribute value
+  EXPRESSION     SimpleDB query expression
++ ATTRIBUTES	Space-delimited list of item attributes
+ 
+ =head1 DESCRIPTION
+ 
+@@ -98,6 +100,10 @@
+ 
+   simpledb query mydomain "['key2'='value2'] intersection ['y'='zee']"
+ 
++# List items and selected attributes matching a given query:
++
++  simpledb query-with-attributes mydomain "key1 key2" "['key2'='value2']"
++
+ # List all attributes on an item:
+ 
+   simpledb get mydomain item1
+@@ -193,6 +199,9 @@
+ 
+ =head1 HISTORY
+ 
++ 2008-11-22 Dan Newcome <dan@ubernote.com>
++ - Added support for QueryWithAttributes
++
+  2008-06-09 Eric Hammond <ehammond@thinksome.com>
+  - Fallback to finding keys in $HOME/.awssecret or /etc/passwd-s3fs
+ 
+@@ -228,6 +237,7 @@
+   'get'           => \&get_attributes,
+   'delete'        => \&delete_attributes,
+   'query'         => \&query,
++  'query-with-attributes' => \&query_with_attributes,
+ );
+ 
+ my $help        = 0;
+@@ -373,6 +383,38 @@
+   } while ( $next_token and ++$count <= $max);
+ }
+ 
++sub query_with_attributes {
++  my ($sdb, $domain_name, $attributes, $query_expression) = @_;
++  my @attributes = split / /, $attributes;
++  my $next_token;
++  my $count = 0;
++  do {
++    my $response = $sdb->queryWithAttributes({
++      AttributeName                    => \@attributes,
++      DomainName                       => $domain_name,
++      QueryExpression                  => $query_expression,
++      ($next_token ? (NextToken        => $next_token) : ()),
++      ($max        ? (MaxNumberOfItems => $max)        : ()),
++    });
++
++    # returns an array of Items
++    my $item_list = $response->getQueryWithAttributesResult->getItem;
++
++    foreach (@$item_list) {
++	my $name = $_->getName;
++	print "$name: ";
++	my $attributes = $_->getAttribute;
++	foreach( @$attributes ) {
++	    my $value = $_->getValue;
++	    print "$value ";
++	}
++	print "\n";
++    }
++
++    $next_token = $response->getQueryWithAttributesResult->getNextToken
++  } while ( $next_token and ++$count <= $max);
++}
++
+ sub pairs_to_attributes {
+   my ($pairs, $with_replace) = @_;
+ 
