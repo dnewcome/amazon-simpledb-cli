@@ -1,0 +1,252 @@
+﻿This project is a distribution of the following project with added functionality
+for performing queries with attributes:
+http://code.google.com/p/amazon-simpledb-cli/
+
+Included is a patch for patching against the original distribution if desired.
+
+Dan Newcome 2008
+
+
+====
+NAME
+====
+
+simpledb - Amazon SimpleDB command line interface
+
+
+========
+SYNOPSIS
+========
+
+ simpledb [opts] create-domain DOMAIN
+ simpledb [opts] delete-domain DOMAIN
+ simpledb [opts] list-domains
+
+ simpledb [opts] put         DOMAIN ITEM [NAME=VALUE]...
+ simpledb [opts] put-replace DOMAIN ITEM [NAME=VALUE]...
+ simpledb [opts] get         DOMAIN ITEM [NAME]...
+ simpledb [opts] delete      DOMAIN ITEM [NAME[=VALUE]]...
+
+ simpledb [opts] query DOMAIN EXPRESSION
+ simpledb [opts] query-with-attributes DOMAIN ATTRIBUTES EXPRESSION
+
+
+=======
+OPTIONS
+=======
+
+ --help         Print help and exit.
+
+ --aws-access-key-id KEY
+                AWS access key id
+                [Defaults to $AWS_ACCESS_KEY_ID environment variable]
+
+ --aws-secret-access-key SECRETKEY
+                AWS secret access key
+                [Defaults to $AWS_SECRET_ACCESS_KEY environment variable]
+
+ --max COUNT
+                Maximum number of domains/items to retrieve and list.
+                [Defaults to all]
+
+ --separator STRING
+                Separator between attribute name and value.
+                [Defaults to equals (=)]
+
+=========
+ARGUMENTS
+=========
+
+ DOMAIN         Domain name
+ ITEM           Item name
+ NAME           Attribute name
+ VALUE          Attribute value
+ EXPRESSION     SimpleDB query expression
+ ATTRIBUTES	Space-delimited list of item attributes
+
+
+===========
+DESCRIPTION
+===========
+
+This utility provides a simple command line interface to most Amazon
+SimpleDB (SDB) actions.
+
+
+========
+EXAMPLES
+========
+
+# The following examples assume you have set these environment variables:
+
+  export AWS_ACCESS_KEY_ID=...
+  export AWS_SECRET_ACCESS_KEY=...
+
+# Create a new SimpleDB domain:
+
+  simpledb create-domain mydomain
+
+# List the domains for this account:
+
+  simpledb list-domains
+
+# Create some items with attribute name=value pairs:
+
+  simpledb put mydomain item1 key1=valueA key2=value2 x=why
+
+  simpledb put mydomain item2 key1=valueB key2=value2 y=zee
+
+# Add another value for an attribute on an item:
+
+  simpledb put mydomain item2 y=zed when=now who=you
+
+# Replace all values for specific attributes on an item:
+
+  simpledb put-replace mydomain item1 key1=value1 newkey=newvalue
+
+# Delete all values for specific attributes on an item:
+
+  simpledb delete mydomain item1 x
+
+# Delete specific values for specific attributes on an item:
+
+  simpledb delete mydomain item2 who=you
+
+# List all of the item names:
+
+  simpledb query mydomain
+
+# List all of the item names matching a given query:
+
+  simpledb query mydomain "['key2'='value2']"
+
+  simpledb query mydomain "['key2'='value2'] intersection ['y'='zee']"
+
+# List items and selected attributes matching a given query:
+
+  simpledb query-with-attributes mydomain "key1 key2" "['key2'='value2']"
+
+# List all attributes on an item:
+
+  simpledb get mydomain item1
+
+  simpledb get mydomain item2
+
+# List specific attributes on an item:
+
+  simpledb get mydomain item2 key2 y
+
+# Delete the entire SimpleDB domain including all items and attributes:
+
+  simpledb delete-domain mydomain
+
+
+===========
+ENVIRONMENT
+===========
+
+ AWS_ACCESS_KEY_ID
+		Default AWS access key id
+
+ AWS_SECRET_ACCESS_KEY
+     
+		Default AWS secret access key
+=====
+FILES
+=====
+
+ $HOME/.awssecret
+		If the above fail, then the keys are sought here in the
+		format expected by the "aws" toolkit (one per line):
+			access_key_id
+			secret_access_key
+
+ /etc/passwd-s3fs
+		If all of the above fail, then the keys are sought
+		here in the format expected by s3fs (colon separated):
+			access_key_id:secret_access_key
+
+
+============
+INSTALLATION
+============
+
+BEWARE! The installation of dependencies is somewhat messy with this
+release and may require some understanding of how Perl works!
+
+This tool depends on the following Perl modules from CPAN:
+
+  Getopt::Long
+  Pod::Usage
+  Digest::SHA1
+  Digest::HMAC
+  XML::Simple
+
+You can install them using the "cpan" command on many Linux distros:
+
+  sudo cpan Getopt::Long Pod::Usage Digest::SHA1 Digest::HMAC XML::Simple
+
+This tool also depends on the Amazon::SDB modules provided by Amazon
+(not the one in CPAN).  Amazon's modules can be found here:
+
+  http://developer.amazonwebservices.com/connect/entry.jspa?externalID=1136
+
+Here is how I installed them.
+
+  curl -Lo amazon-simpledb-perl-library.zip \
+    http://amazon-simpledb-perl-library.notlong.com
+
+  unzip amazon-simpledb-perl-library.zip
+
+  sitelib=$(perl -MConfig -le 'print $Config{sitelib}')
+  sudo scp -r amazon-simpledb-*-perl-library/src/Amazon $sitelib
+
+Finally, this command line interface can be installed with:
+
+  sudo curl -Lo /usr/local/bin/simpledb http://simpledb-cli.notlong.com
+  sudo chmod +x /usr/local/bin/simpledb
+
+
+========
+SEE ALSO
+========
+
+Latest versions of this script available from the Google Code project:
+http://code.google.com/p/amazon-simpledb-cli/
+
+Amazon SimpleDB (SDB)
+http://www.amazon.com/SimpleDB-AWS-Service-Pricing/b/?node=342335011
+
+Amazon SimpleDB Developer Guide
+http://docs.amazonwebservices.com/AmazonSimpleDB/2007-11-07/DeveloperGuide/
+
+sdbShell (another SimpleDB command line interface by David Kavanagh)
+http://code.google.com/p/typica/
+
+
+=======
+CAVEATS
+=======
+
+As currently written this tool does not support keys containing equal
+signs (=).
+
+Output will be difficult to parse if the values contain newlines.
+
+
+=======
+HISTORY
+=======
+
+ 2008-11-22 Dan Newcome <dan@ubernote.com>
+ - Added support for QueryWithAttributes
+
+ 2008-06-09 Eric Hammond <ehammond@thinksome.com>
+ - Fallback to finding keys in $HOME/.awssecret or /etc/passwd-s3fs
+
+ 2008-06-03 Eric Hammond <ehammond@thinksome.com>
+ - Completed --max option
+ - bugfix: Corrected --aws-secret-access-key option spelling
+
+ 2008-05-26 Eric Hammond <ehammond@thinksome.com>
+ - Original release
